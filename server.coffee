@@ -54,8 +54,8 @@ client ->
     $("#data tfoot th").each(->
       labels.push($(this).html()))
     $("#data tbody td").each(->
-        data.push($(this).html()))
-        
+      data.push($(this).html()))
+    console.log data  
     width = 800
     height = 250
     leftgutter = 30
@@ -184,7 +184,7 @@ view ->
         th i for i in [1..31]
     tbody ->
       tr ->
-        th i for i in [1..31]
+        td i for i in [1..31]
   div id: 'holder'
           
     
