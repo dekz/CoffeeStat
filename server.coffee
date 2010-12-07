@@ -54,13 +54,13 @@ spawn = require('child_process').spawn
   
 analyzeData = (data) ->
   console.log 'analysing data'
-  statsData = statsData.split '\n'
+  data = data.split '\n'
   day = new Array()
   hour = new Array()
   month = new Array()
   top = new Array()
   summary = new Array()
-  for line in statsData
+  for line in data
     # sys.puts sys.inspect line
     # sys.puts '------------'
     item = line.split ';'
