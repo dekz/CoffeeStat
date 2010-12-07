@@ -106,9 +106,9 @@ parseStreamData = (streamData) ->
   sys.puts streamData
 #  broadcast 'stream', rx: streamData[1], tx: streamData[4], time: new Date()
 
-init = ->
-  #stats = spawn 'vnstat', ['--dumpdb', '-i', 'en1'] 
-  stats = spawn 'vnstat', ['-i', 'en1', '-l']
+
+watchNetworkStats = (interface) ->
+  stats = spawn 'vnstat', ['-i', interface, '-l']
   statsData = ''
 
   stats.stdout.on 'data', (data) ->
@@ -117,11 +117,14 @@ init = ->
     test = clean.split(';')
     parseStreamData test.slice(1)
 
-  stats.stderr.on 'data', (data) ->
-    sys.print 'stderr: ' + data
+    stats.stderr.on 'data', (data) ->
+      sys.print 'stderr: ' + data
 
-  stats.on 'exit', (code) ->
-    console.log 'child process exited with code ' + code
-    #analyzeData statsData
-  
+    stats.on 'exit', (code) ->
+      console.log 'child process exited with code ' + code
+
+init = ->
+  #stats = spawn 'vnstat', ['--dumpdb', '-i', 'en1'] 
+  watchNetworkStats 'en1'
+
 init()
