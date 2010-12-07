@@ -1,3 +1,6 @@
+registry = {}
+def registry: registry
+
 get '/': -> render 'default'
 
 get '/counter': -> "# of messages so far: #{app.counter}"
@@ -6,6 +9,8 @@ at connection: ->
   app.counter ?= 0
   console.log "Connected: #{id}"
   broadcast 'connected', id: id
+  
+  registry.send = send
 
 at disconnection: ->
   console.log "Disconnected: #{id}"
@@ -104,7 +109,10 @@ analyzeData = (data) ->
   
 parseStreamData = (streamData) ->
   sys.puts streamData
-#  broadcast 'stream', rx: streamData[1], tx: streamData[4], time: new Date()
+  
+  if registry.send
+    registry.send 'said', id: 0, text: JSON.stringify(streamData)
+    # broadcast 'stream', rx: streamData[1], tx: streamData[4], time: new Date()
 
 
 watchNetworkStats = (interface) ->
