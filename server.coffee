@@ -127,13 +127,14 @@ client ->
             is_label_visible = false;
           , 1)
         )
+
       )(x, y, data[i], labels[i], dot)
-    # x = 10
-    # y = 10
-    # p = p.concat([x,y,x,y])
-    # bgpp = bgpp.concat([x, y, x, y, "L", x, height - bottomgutter, "z"])
-    # path.attr({path: p})
-    # bgp.attr({path: bgpp})
+#    x = 10
+ #   y = 10
+    p = p.concat([x,y,x,y])
+    bgpp = bgpp.concat([x, y, x, y, "L", x, height - bottomgutter, "z"])
+    path.attr({path: p})
+    bgp.attr({path: bgpp})
     frame.toFront()
     label[0].toFront()
     label[1].toFront()
@@ -172,7 +173,15 @@ client ->
 view ->
   @title = 'CoffeeStat'
   @scripts = ['http://code.jquery.com/jquery-1.4.3.min', '/socket.io/socket.io', '/default', 'http://github.com/DmitryBaranovskiy/raphael/raw/master/raphael-min', 'raphael/popup']
-
+  style '''
+      body {
+        background: #000;
+      }
+      #holder {
+        height: 250px;
+        width: 800px;
+      }
+  '''
   h1 @title
   div id: 'log'
   form ->
