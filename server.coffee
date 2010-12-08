@@ -1,3 +1,5 @@
+XRegExp = require(process.cwd() + '/lib/xregexp').XRegExp
+
 registry = {}
 def registry: registry
 
@@ -31,29 +33,22 @@ include 'client.coffee'
 
 view ->
   @title = 'CoffeeStat'
-  @scripts = ['http://code.jquery.com/jquery-1.4.3.min', '/socket.io/socket.io', '/default', 'http://github.com/DmitryBaranovskiy/raphael/raw/master/raphael-min', 'raphael/popup']
-  style '''
-      body {
-        background: #000;
-      }
-      #holder {
-        height: 250px;
-        width: 800px;
-      }
-  '''
+  @scripts = [
+    'http://code.jquery.com/jquery-1.4.3.min'
+    '/socket.io/socket.io'
+    '/default'
+    'http://github.com/DmitryBaranovskiy/raphael/raw/master/raphael-min'
+    'raphael/popup'
+    'highcharts/highcharts'
+    'xregexp/xregexp'
+  ]
   h1 @title
   div id: 'log'
   form ->
     input id: 'box'
     button id: 'say', -> 'Say'
-  table id: 'data', ->
-    tfoot ->
-      tr ->
-        th i for i in [1..31]
-    tbody ->
-      tr ->
-        td i for i in [1..31]
-  div id: 'holder'
+    
+  div id: "container", class: "highcharts-container", style: "height:410px; margin: 0 2em; clear:both; min-width: 600px"
           
     
 ## Here be data dragons
@@ -61,82 +56,55 @@ view ->
 stdin = process.openStdin()
 sys = require 'utils'
 spawn = require('child_process').spawn
+
+monitor_network_interface = (interface) ->
+  # mad hax to get 2FPS instead of 1/2FPS
+  # TODO make this programatic rather than hardcoded
   
-analyzeData = (data) ->
-  console.log 'analysing data'
-  data = data.split '\n'
-  day = new Array()
-  hour = new Array()
-  month = new Array()
-  top = new Array()
-  summary = new Array()
-  for line in data
-    # sys.puts sys.inspect line
-    # sys.puts '------------'
-    item = line.split ';'
-    # sys.puts sys.inspect item
-    # sys.puts '------------'
-    switch item[0]
-      when 'd' 
-        day[item[1]] = {}
-        day[item[1]].time = item[2]
-        day[item[1]].rx   = item[3] * 1024 + item[5]
-        day[item[1]].tx   = item[4] * 1024 + item[6]
-        day[item[1]].act  = item[7]
-        break
-      when 'm'
-        month[item[1]] = {}
-        month[item[1]].time = item[2]
-        month[item[1]].rx   = item[3] * 1024 + item[5]
-        month[item[1]].tx   = item[4] * 1024 + item[6]
-        month[item[1]].act  = item[7]
-        break
-      when 'h'
-        hour[item[1]] = {}
-        hour[item[1]].time = item[2]
-        hour[item[1]].rx   = item[3] * 1024 + item[5]
-        hour[item[1]].tx   = item[4] * 1024 + item[6]
-        hour[item[1]].act  = item[7]
-        break
-      when 't'
-        top[item[1]] = {}
-        top[item[1]].time = item[2]
-        top[item[1]].rx   = item[3] * 1024 + item[5]
-        top[item[1]].tx   = item[4] * 1024 + item[6]
-        top[item[1]].act  = item[7]
-        break
-      else
-        summary[item[0]] = {}
-        summary[item[0]].info = item[1]
+  stats_a = spawn 'vnstat', ['-i', interface, '--live']
+  setTimeout(->
+    stats_b = spawn 'vnstat', ['-i', interface, '--live']
+    setTimeout(->
+      stats_c = spawn 'vnstat', ['-i', interface, '--live']
+      setTimeout(->
+        stats_d = spawn 'vnstat', ['-i', interface, '--live']
+        
+        monitor = ->
+          data = (data) ->
+            data = data.toString()
+      
+            data = data.replace /\s+/g, ' '
+            data = data.replace /\t/g, ''
+      
+            data = data.trim()
 
-  sys.puts sys.inspect summary
-  
-  
-parseStreamData = (streamData) ->
-  sys.puts streamData  
-  if registry.send
-    registry.send 'networkStream', id: 0, text: JSON.stringify(streamData)
+            regex = XRegExp('rx: (?<rx>[\\d.]+) (?<ru>.)bit\/s (?<rp>[\\d.]+) p\/s tx: (?<tx>[\\d.]+) (?<tu>.)bit\/s (?<tp>[\\d.]+) p\/s')
+      
+            if regex.test data
+              matches = regex.exec data
+              console.log "#{matches.rx}#{matches.ru}:#{matches.tx}#{matches.tu}"
+              rx = if matches.ru is 'k' then matches.rx else matches.rx * 1000
+              tx = if matches.tu is 'k' then matches.tx else matches.tx * 1000
+              registry.send 'network', {rx: rx, tx: tx} if registry.send
 
+          error = (data) ->
+            sys.print 'stderr: ' + data
 
+          exit = (code) ->
+            console.log 'child process exited with code ' + code
 
-watchNetworkStats = (interface) ->
-  stats = spawn 'vnstat', ['-i', interface, '-l']
-  statsData = ''
+          stats_a.stdout.on 'data', data
+          stats_a.on 'exit', exit
+          stats_b.stdout.on 'data', data
+          stats_b.on 'exit', exit
+          stats_c.stdout.on 'data', data
+          stats_c.on 'exit', exit
+          stats_d.stdout.on 'data', data
+          stats_d.on 'exit', exit
+      
+        setTimeout(monitor, 0)
+      , 1500)
+    , 1000)
+  , 500)
 
-  stats.stdout.on 'data', (data) ->
-    data = '' + data
-    clean = data.replace(/\s{2,}/g,';')
-    test = clean.split(';')
-    parseStreamData test.slice(1)
-
-    stats.stderr.on 'data', (data) ->
-      sys.print 'stderr: ' + data
-
-    stats.on 'exit', (code) ->
-      console.log 'child process exited with code ' + code
-
-init = ->
-  #stats = spawn 'vnstat', ['--dumpdb', '-i', 'en1'] 
-  watchNetworkStats 'en1'
-
-init()
+monitor_network_interface 'en1'
